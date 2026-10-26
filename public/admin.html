@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - EL READER</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #0b0f19;
+      --card-bg: #111827;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --primary: #ffcb05;
+      --primary-hover: #e5b600;
+      --danger: #ef4444;
+      --success: #10b981;
+      --border: #1f2937;
+      --input-bg: #1f2937;
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+
+    /* Container */
+    .dashboard-container {
+      width: 100%;
+      max-width: 440px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 40px 32px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      position: relative;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo {
+      font-weight: 800;
+      font-size: 1.5rem;
+      letter-spacing: 1px;
+      color: var(--primary);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    /* Form Fields */
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.813rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      color: var(--text-muted);
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      background-color: var(--input-bg);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      font-size: 0.938rem;
+      font-family: inherit;
+      transition: var(--transition);
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(255, 203, 5, 0.15);
+    }
+
+    /* Buttons */
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 0.938rem;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background-color: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      margin-top: 12px;
+    }
+
+    .btn-secondary:hover {
+      background-color: rgba(255, 255, 255, 0.03);
+    }
+
+    /* Switch Style for Status Toggle */
+    .status-card {
+      background-color: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+
+    .status-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .status-title {
+      font-weight: 700;
+      font-size: 0.938rem;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.813rem;
+      font-weight: 600;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .badge-active { color: var(--success); }
+    .badge-active .badge-dot { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
+
+    .badge-inactive { color: var(--danger); }
+    .badge-inactive .badge-dot { background-color: var(--danger); box-shadow: 0 0 8px var(--danger); }
+
+    /* Modern Toggle Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 28px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #374151;
+      transition: .4s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--primary);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(22px);
+      background-color: #000;
+    }
+
+    /* Notifications */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 16px 20px;
+      border-radius: 12px;
+      background: #111827;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      font-size: 0.875rem;
+      font-weight: 500;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: var(--transition);
+      z-index: 1000;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast-success { border-left: 4px solid var(--success); }
+    .toast-error { border-left: 4px solid var(--danger); }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(17, 24, 39, 0.8);
+      backdrop-filter: blur(4px);
+      border-radius: 24px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+      opacity: 0;
+      pointer-events: none;
+      transition: var(--transition);
+    }
+
+    .loading-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 203, 5, 0.1);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard-container">
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- LOGIN SCREEN -->
+    <div id="loginSection">
+      <div class="header">
+        <div class="logo">EL READER</div>
+        <div class="subtitle">Panel de Control de Administrador</div>
+      </div>
+      
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="username">Usuario</label>
+          <input type="text" id="username" placeholder="Ingresa usuario" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <input type="password" id="password" placeholder="Ingresa contraseña" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
+      </form>
+    </div>
+
+    <!-- ADMIN PANEL (Hidden by default) -->
+    <div id="adminSection" style="display: none;">
+      <div class="header">
+        <div class="logo">Panel de Control</div>
+        <div class="subtitle">Administra el estado de la web y accesos</div>
+      </div>
+
+      <!-- Site Status Toggle -->
+      <div class="status-card">
+        <div class="status-info">
+          <div class="status-title">Estado de la Web</div>
+          <div class="status-badge badge-active" id="statusBadge">
+            <span class="badge-dot"></span>
+            <span id="statusText">Activo</span>
+          </div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="statusToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- PIN Changer -->
+      <div class="form-group">
+        <label for="passcodePin">PIN de Acceso General</label>
+        <input type="text" id="passcodePin" maxlength="4" placeholder="Ej: 2026" style="letter-spacing: 4px; font-weight: 700; text-align: center;">
+        <span class="subtitle" style="display: block; margin-top: 6px; font-size: 0.75rem;">Código numérico de 4 dígitos para los lectores</span>
+      </div>
+
+      <button id="btnSave" class="btn btn-primary">Guardar Configuración</button>
+      <button id="btnLogout" class="btn btn-secondary">Cerrar Panel</button>
+    </div>
+  </div>
+
+  <!-- Toast message element -->
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    
+    // Elements
+    const loginSection = $('loginSection');
+    const adminSection = $('adminSection');
+    const loginForm = $('loginForm');
+    const usernameInput = $('username');
+    const passwordInput = $('password');
+    const loadingOverlay = $('loadingOverlay');
+    
+    const statusToggle = $('statusToggle');
+    const statusBadge = $('statusBadge');
+    const statusText = $('statusText');
+    const passcodePin = $('passcodePin');
+    const btnSave = $('btnSave');
+    const btnLogout = $('btnLogout');
+    const toast = $('toast');
+
+    // Show Toast Notification
+    function showToast(message, isError = false) {
+      toast.textContent = message;
+      toast.className = `toast show ${isError ? 'toast-error' : 'toast-success'}`;
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3500);
+    }
+
+    // Toggle loader
+    function setLoader(active) {
+      if (active) loadingOverlay.classList.add('active');
+      else loadingOverlay.classList.remove('active');
+    }
+
+    // Set Status Badge UI
+    function updateStatusUI(isActive) {
+      if (isActive) {
+        statusBadge.className = 'status-badge badge-active';
+        statusText.textContent = 'Activo';
+      } else {
+        statusBadge.className = 'status-badge badge-inactive';
+        statusText.textContent = 'Inactivo / Apagado';
+      }
+    }
+
+    // Submit Login
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const user = usernameInput.value.trim();
+      const pass = passwordInput.value.trim();
+
+      setLoader(true);
+      try {
+        const response = await fetch('/api/admin', {
+          method: 'GET',
+          headers: {
+            'x-admin-username': user,
+            'x-admin-password': pass
+          }
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || 'Credenciales inválidas');
+        }
+
+        const settings = await response.json();
+        
+        // Save to sessionStorage
+        sessionStorage.setItem('admin_user', user);
+        sessionStorage.setItem('admin_pass', pass);
+
+        // Load values in inputs
+        statusToggle.checked = (settings.siteStatus === 'active');
+        updateStatusUI(settings.siteStatus === 'active');
+        passcodePin.value = settings.passcode;
+
+        // Switch layouts
+        loginSection.style.display = 'none';
+        adminSection.style.display = 'block';
+        showToast('Sesión iniciada con éxito');
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        setLoader(false);
+      }
+    });
+
+    // Toggle change handler
+    statusToggle.addEventListener('change', () => {
+      updateStatusUI(statusToggle.checked);
+    });
+
+    // Format PIN field to accept only numbers
+    passcodePin.addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/\D/g, '');
+    });
+
+    // Save Settings Handler
+    btnSave.addEventListener('click', async () => {
+      const pin = passcodePin.value.trim();
+      if (!/^\d{4}$/.test(pin)) {
+        showToast('El PIN debe tener exactamente 4 números', true);
+        return;
+      }
+
+      const user = sessionStorage.getItem('admin_user');
+      const pass = sessionStorage.getItem('admin_pass');
+      const siteStatus = statusToggle.checked ? 'active' : 'inactive';
+
+      setLoader(true);
+      try {
+        const response = await fetch('/api/admin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-username': user,
+            'x-admin-password': pass
+          },
+          body: JSON.stringify({ siteStatus, passcode: pin })
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || 'Error al guardar la configuración');
+        }
+
+        showToast('Configuración guardada correctamente');
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        setLoader(false);
+      }
+    });
+
+    // Logout Handler
+    btnLogout.addEventListener('click', () => {
+      sessionStorage.removeItem('admin_user');
+      sessionStorage.removeItem('admin_pass');
+      loginSection.style.display = 'block';
+      adminSection.style.display = 'none';
+      passwordInput.value = '';
+      showToast('Sesión cerrada');
+    });
+
+    // Check if session exists on load
+    window.addEventListener('DOMContentLoaded', () => {
+      const user = sessionStorage.getItem('admin_user');
+      const pass = sessionStorage.getItem('admin_pass');
+      if (user && pass) {
+        usernameInput.value = user;
+        passwordInput.value = pass;
+        loginForm.dispatchEvent(new Event('submit'));
+      }
+    });
+  </script>
+</body>
+</html>
