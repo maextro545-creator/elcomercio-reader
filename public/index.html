@@ -1890,24 +1890,156 @@ async function restoreNormalFeed() {
   }
 }
 
-async function readDirectUrl(url) {
+function renderJinaArticle(jinaText, articleUrl) {
+  let title = '';
+  const titleMatch = jinaText.match(/^Title:\s*(.+)$/m);
+  if (titleMatch) title = titleMatch[1].trim();
+
+  let pubDate = '';
+  const dateMatch = jinaText.match(/^Published Time:\s*(.+)$/m);
+  if (dateMatch) pubDate = dateMatch[1].trim();
+
+  let author = 'Redacción El Comercio';
+  const authorMatch = jinaText.match(/Por\s+\[?([A-ZÁÉÍÓÚÑa-záéíóúñ\s]+)\]?(?:\(https?:\/\/[^\)]+\))?/);
+  if (authorMatch && authorMatch[1].trim().length < 50) {
+    author = authorMatch[1].trim();
+  }
+
+  let section = 'Noticia';
+  if (articleUrl) {
+    const parts = articleUrl.replace('https://elcomercio.pe/', '').split('/');
+    if (parts[0]) {
+      section = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).replace(/-/g, ' ');
+    }
+  }
+
+  let heroImage = '';
+  let heroCaption = '';
+  const resizerMatch = jinaText.match(/!\[([^\]]*)\]\((https:\/\/elcomercio\.pe\/resizer\/[^\)]+)\)/);
+  if (resizerMatch) {
+    heroImage = resizerMatch[2];
+    heroCaption = resizerMatch[1].replace(/^Image\s+\d+:\s*/i, '').trim();
+  }
+
+  let bodyMarkdown = jinaText;
+  const authorIndex = bodyMarkdown.search(/Por\s+\[?[A-ZÁÉÍÓÚÑa-záéíóúñ\s]+\]?/);
+  if (authorIndex !== -1) {
+    const nextNewline = bodyMarkdown.indexOf('\n', authorIndex);
+    if (nextNewline !== -1) bodyMarkdown = bodyMarkdown.slice(nextNewline);
+  } else {
+    const mdIndex = bodyMarkdown.indexOf('Markdown Content:');
+    if (mdIndex !== -1) bodyMarkdown = bodyMarkdown.slice(mdIndex + 'Markdown Content:'.length);
+  }
+
+  const footerCutoffs = [
+    /\n\s*TE PUEDE INTERESAR/i,
+    /\n\s*MIRA TAMBIÉN/i,
+    /\n\s*NOTAS RELACIONADAS/i,
+    /\n\s*VIDEO RECOMENDADO/i,
+    /\n\s*© \d{4} Empresa Editora/i
+  ];
+  for (const cutoff of footerCutoffs) {
+    const match = bodyMarkdown.match(cutoff);
+    if (match && match.index !== -1) {
+      bodyMarkdown = bodyMarkdown.slice(0, match.index);
+    }
+  }
+
+  const lines = bodyMarkdown.split('\n');
+  const bodyHtmlParts = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i].trim();
+    if (!line) continue;
+
+    if (line.includes('suscripciones') || line.includes('Club El Comercio') || line.includes('icono te lo cuento') || line.includes('Audio 2') || line.includes('Pregúntale a Merlín') || line.includes('Inicia sesión')) {
+      continue;
+    }
+    if (line.startsWith('[](') && (line.includes('whatsapp') || line.includes('facebook') || line.includes('twitter'))) {
+      continue;
+    }
+
+    const imgMatch = line.match(/^!\[([^\]]*)\]\(([^\)]+)\)$/);
+    if (imgMatch) {
+      let cap = imgMatch[1].replace(/^Image\s+\d+:\s*/i, '').trim();
+      let src = imgMatch[2];
+      if (src.includes('default-md.png') || src.includes('icon') || src.includes('logo.png')) {
+        continue;
+      }
+      bodyHtmlParts.push(`
+        <div class="article__image-container" style="margin:24px 0;">
+          <img src="${src}" class="article__image" style="width:100%;border-radius:var(--radius-md);" loading="lazy">
+          ${cap ? `<div class="article__image-caption">${esc(cap)}</div>` : ''}
+        </div>
+      `);
+      continue;
+    }
+
+    if (line.startsWith('/') || line.startsWith('Foto:')) {
+      bodyHtmlParts.push(`<div style="font-size:0.75rem;color:var(--ec-gray-500);margin-top:-8px;margin-bottom:16px;">${esc(line)}</div>`);
+      continue;
+    }
+
+    if (line.startsWith('**') && line.endsWith('**') && line.length < 80) {
+      const heading = line.slice(2, -2).trim();
+      bodyHtmlParts.push(`<h2 style="font-family:var(--font-serif);font-size:1.375rem;margin:28px 0 12px;font-weight:700;">${esc(heading)}</h2>`);
+      continue;
+    }
+    if (line.startsWith('## ') || line.startsWith('### ')) {
+      const heading = line.replace(/^#+\s*/, '').trim();
+      bodyHtmlParts.push(`<h2 style="font-family:var(--font-serif);font-size:1.375rem;margin:28px 0 12px;font-weight:700;">${esc(heading)}</h2>`);
+      continue;
+    }
+
+    let pText = line.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    pText = pText.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    bodyHtmlParts.push(`<p>${pText}</p>`);
+  }
+
+  let html = `
+    <div class="article__section">${esc(section)}</div>
+    <h1 class="article__title">${esc(title)}</h1>
+    <div class="article__meta">
+      <span class="article__author">${esc(author)}</span>
+      <span class="news-card__dot"></span>
+      <span class="article__date">${pubDate ? formatDateFull(pubDate) : 'Archivo'}</span>
+    </div>
+  `;
+
+  if (heroImage) {
+    html += `
+      <div class="article__image-container">
+        <img src="${heroImage}" alt="${esc(title)}" class="article__image">
+        ${heroCaption ? `<div class="article__image-caption">${esc(heroCaption)}</div>` : ''}
+      </div>
+    `;
+  }
+
+  html += `<div class="article__body">${bodyHtmlParts.join('\n')}</div>`;
+
+  modalContent.innerHTML = html;
+  updateReaderFontSize();
+  setupArticleImageToggles();
+}
+
+async function readDirectUrl(rawUrl) {
   // Clear input
   urlInput.value = '';
 
-  const cleanUrl = url.split('?')[0].replace(/\/+$/, '');
+  const cleanUrl = rawUrl.split('#')[0].split('?')[0].replace(/\/+$/, '');
   const pool = window.allNewsOriginal && window.allNewsOriginal.length > 0 ? window.allNewsOriginal : allNews;
-  const matched = (pool || []).find(n => n.link && n.link.split('?')[0].replace(/\/+$/, '') === cleanUrl);
+  const matched = (pool || []).find(n => n.link && n.link.split('#')[0].split('?')[0].replace(/\/+$/, '') === cleanUrl);
   if (matched) {
     openArticle(matched.id);
     return;
   }
   
   // Setup modal loading state
-  modalSourceLink.href = url;
+  modalSourceLink.href = rawUrl;
   modalContent.innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:100px 20px;gap:20px;">
       <div class="loading__spinner"></div>
-      <p style="color:var(--ec-gray-600);font-size:0.938rem;">Obteniendo y formateando artículo completo...</p>
+      <p style="color:var(--ec-gray-600);font-size:0.938rem;">Desbloqueando y cargando artículo completo...</p>
     </div>
   `;
   
@@ -1916,16 +2048,32 @@ async function readDirectUrl(url) {
   requestAnimationFrame(() => modalOverlay.classList.add('visible'));
   
   try {
+    // 1. Try Jina Reader first (super fast, unlocks paywalled articles, and provides direct CORS on GitHub Pages)
+    try {
+      const jinaRes = await fetchWithTimeout(`https://r.jina.ai/${cleanUrl}`, 16000);
+      if (jinaRes.ok) {
+        const jinaText = await jinaRes.text();
+        if (jinaText && jinaText.includes('Title:') && jinaText.length > 300) {
+          renderJinaArticle(jinaText, cleanUrl);
+          return;
+        }
+      }
+    } catch (jinaErr) {
+      console.warn('[EC] Jina Reader error, trying fallbacks:', jinaErr);
+    }
+
+    // 2. Try local /api/scrape if running on Node backend
     let htmlText = '';
     try {
-      const scrapeUrl = getRelativeUrl(`api/scrape?url=${encodeURIComponent(url)}`);
+      const scrapeUrl = getRelativeUrl(`api/scrape?url=${encodeURIComponent(cleanUrl)}`);
       const response = await fetchWithTimeout(scrapeUrl, 5000);
       if (response.ok) htmlText = await response.text();
     } catch (e) {}
 
+    // 3. Fallback to allorigins
     if (!htmlText) {
       try {
-        const proxyRes = await fetchWithTimeout(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, 5000);
+        const proxyRes = await fetchWithTimeout(`https://api.allorigins.win/get?url=${encodeURIComponent(cleanUrl)}`, 6000);
         if (proxyRes.ok) {
           const proxyData = await proxyRes.json();
           if (proxyData.contents) htmlText = proxyData.contents;
@@ -1938,10 +2086,10 @@ async function readDirectUrl(url) {
       modalContent.innerHTML = `
         <div class="article__section">Archivo Histórico</div>
         <h1 class="article__title" style="margin-bottom:16px;">Artículo de El Comercio</h1>
-        <p class="article__description" style="color:var(--ec-gray-600);margin-bottom:24px;">Enlace del archivo: <strong>${esc(url)}</strong></p>
+        <p class="article__description" style="color:var(--ec-gray-600);margin-bottom:24px;">Enlace del archivo: <strong>${esc(cleanUrl)}</strong></p>
         <div style="background:var(--ec-gray-100);padding:28px 20px;border-radius:var(--radius-md);text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;">
           <p style="color:var(--ec-gray-800);font-size:1.05rem;line-height:1.5;">Esta noticia pertenece al archivo histórico de El Comercio.</p>
-          <a href="${url}" target="_blank" rel="noopener" class="header__refresh-btn" style="text-decoration:none;display:inline-flex;padding:12px 28px;">
+          <a href="${rawUrl}" target="_blank" rel="noopener" class="header__refresh-btn" style="text-decoration:none;display:inline-flex;padding:12px 28px;">
             <span>Abrir noticia completa original</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
           </a>
@@ -2670,7 +2818,19 @@ function openArticle(id) {
     // Iniciar carga del contenido completo desbloqueado en segundo plano
     (async () => {
       try {
-        const scrapeUrl = `/api/scrape?url=${encodeURIComponent(article.link)}`;
+        // 1. Intentar Jina AI Reader
+        try {
+          const jinaRes = await fetchWithTimeout(`https://r.jina.ai/${article.link}`, 15000);
+          if (jinaRes.ok) {
+            const jinaText = await jinaRes.text();
+            if (jinaText && jinaText.includes('Title:') && jinaText.length > 300) {
+              renderJinaArticle(jinaText, article.link);
+              return;
+            }
+          }
+        } catch(e) {}
+
+        const scrapeUrl = getRelativeUrl(`api/scrape?url=${encodeURIComponent(article.link)}`);
         const response = await fetchWithTimeout(scrapeUrl);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         
