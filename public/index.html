@@ -1899,10 +1899,19 @@ function renderJinaArticle(jinaText, articleUrl) {
   const dateMatch = jinaText.match(/^Published Time:\s*(.+)$/m);
   if (dateMatch) pubDate = dateMatch[1].trim();
 
+  // Find H1 heading to locate actual article start (after nav menus at top)
+  const h1Index = jinaText.search(/\n#\s+[^\n]+/);
+  const articleSection = h1Index !== -1 ? jinaText.slice(h1Index) : jinaText;
+
   let author = 'Redacción El Comercio';
-  const authorMatch = jinaText.match(/Por\s+\[?([A-ZÁÉÍÓÚÑa-záéíóúñ\s]+)\]?(?:\(https?:\/\/[^\)]+\))?/);
-  if (authorMatch && authorMatch[1].trim().length < 50) {
+  // Match "Por [Name](url)" — avoids false match on "Por qué" nav links
+  const authorMatch = articleSection.match(/Por\s+\[([A-ZÁÉÍÓÚÑa-záéíóúñ\s]+)\]\([^\)]+\)/m);
+  if (authorMatch && authorMatch[1].trim().length < 60) {
     author = authorMatch[1].trim();
+  } else {
+    // Fallback: plain "Por Name" without hyperlink, after H1
+    const authorFallback = articleSection.match(/^Por\s+([A-ZÁÉÍÓÚÑa-záéíóúñ\s]{5,50})[\d\/\n]/m);
+    if (authorFallback) author = authorFallback[1].trim();
   }
 
   let section = 'Noticia';
@@ -1921,11 +1930,12 @@ function renderJinaArticle(jinaText, articleUrl) {
     heroCaption = resizerMatch[1].replace(/^Image\s+\d+:\s*/i, '').trim();
   }
 
-  let bodyMarkdown = jinaText;
-  const authorIndex = bodyMarkdown.search(/Por\s+\[?[A-ZÁÉÍÓÚÑa-záéíóúñ\s]+\]?/);
-  if (authorIndex !== -1) {
-    const nextNewline = bodyMarkdown.indexOf('\n', authorIndex);
-    if (nextNewline !== -1) bodyMarkdown = bodyMarkdown.slice(nextNewline);
+  // Extract body starting AFTER the author line, within articleSection
+  let bodyMarkdown = articleSection;
+  const authorLineMatch = bodyMarkdown.match(/Por\s+\[?[A-ZÁÉÍÓÚÑa-záéíóúñ\s]+\]?(?:\([^\)]+\))?[^\n]*/m);
+  if (authorLineMatch && authorLineMatch.index !== undefined) {
+    const afterAuthor = bodyMarkdown.indexOf('\n', authorLineMatch.index + authorLineMatch[0].length);
+    if (afterAuthor !== -1) bodyMarkdown = bodyMarkdown.slice(afterAuthor);
   } else {
     const mdIndex = bodyMarkdown.indexOf('Markdown Content:');
     if (mdIndex !== -1) bodyMarkdown = bodyMarkdown.slice(mdIndex + 'Markdown Content:'.length);
